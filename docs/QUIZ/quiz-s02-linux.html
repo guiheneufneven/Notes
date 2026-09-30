@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz S02 – Admin Linux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F6F9; --surface:#FFFFFF; --ink:#18202E; --muted:#5A6478; --line:#D8DEE8;
+  --ok:#1B8A4B; --ok-bg:#E7F5EC; --ko:#C0362C; --ko-bg:#FBEBE9;
+  --accent:#0E7C72;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,"Liberation Mono",monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121722; --surface:#1A2130; --ink:#E6EAF2; --muted:#97A1B5; --line:#2C3547;
+    --ok:#4CC47F; --ok-bg:#16301F; --ko:#F0675C; --ko-bg:#3A1D1B;
+    --accent:#3CC4B4;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:20px 18px 32px}
+h1{font-size:1.6rem;line-height:1.2;margin:0 0 6px;font-weight:700;letter-spacing:-.01em}
+h1::before{content:"";display:block;width:36px;height:4px;border-radius:2px;background:var(--accent);margin-bottom:14px}
+h2{font-size:1.2rem;margin:0 0 12px;font-weight:600}
+p{margin:0 0 12px}
+.muted{color:var(--muted)}
+code{font-family:var(--mono);font-size:.88em;background:color-mix(in srgb,var(--accent) 10%,transparent);padding:.08em .35em;border-radius:4px;word-break:break-word}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,.chip:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+
+.intro{margin-bottom:22px}
+.block{margin-bottom:20px}
+.label{font-weight:600;font-size:.95rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.label small{font-weight:400;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{position:relative}
+.chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.chip input:disabled{cursor:not-allowed}
+.chip span{display:inline-block;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:.9rem;color:var(--muted)}
+.chip input:checked + span{border-color:var(--accent);color:var(--ink);background:color-mix(in srgb,var(--accent) 12%,var(--surface))}
+.chip input:disabled + span{opacity:.4}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-size:.85rem;text-decoration:underline;text-underline-offset:2px}
+
+.primary{background:var(--accent);color:var(--surface);border:0;border-radius:8px;padding:12px 20px;font-weight:600}
+.secondary{background:transparent;border:1px solid var(--line);border-radius:8px;padding:11px 18px;font-weight:500}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.best{font-size:.9rem;color:var(--muted);margin-left:auto}
+
+/* Piste de progression : un segment par question */
+.track{display:flex;gap:3px;margin:10px 0 18px;height:8px}
+.track i{flex:1;border-radius:2px;background:var(--line);transition:background .25s}
+.track i.cur{background:color-mix(in srgb,var(--accent) 55%,var(--line))}
+.track i.ok{background:var(--ok)}
+.track i.ko{background:var(--ko)}
+.track.dense{gap:1px}
+@media (max-width:480px){.track{gap:2px;height:6px}}
+
+.qhead{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:.9rem;color:var(--muted)}
+.qhead b{color:var(--ink);font-weight:600}
+.theme{font-size:.8rem;color:var(--accent);font-weight:600}
+.question{font-size:1.15rem;font-weight:600;line-height:1.45;margin:4px 0 16px}
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:12px;align-items:flex-start;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.45}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt .k{flex:none;width:24px;height:24px;border-radius:6px;display:grid;place-items:center;font:500 .8rem var(--mono);border:1px solid var(--line);color:var(--muted)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--ok);background:var(--ok-bg)}
+.opt.right .k{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.opt.wrong{border-color:var(--ko);background:var(--ko-bg)}
+.opt.wrong .k{background:var(--ko);border-color:var(--ko);color:var(--surface)}
+.opt.dim{opacity:.55}
+
+.feedback{margin-top:14px;padding:14px 16px;border-radius:10px;border-left:4px solid var(--ok);background:var(--surface)}
+.feedback.ko{border-left-color:var(--ko)}
+.feedback .verdict{font-weight:700;margin-bottom:4px}
+.feedback.ok .verdict{color:var(--ok)}
+.feedback.ko .verdict{color:var(--ko)}
+.feedback .src{font-size:.82rem;color:var(--muted);margin-top:8px}
+.next{margin-top:16px}
+
+.score{display:flex;align-items:baseline;gap:14px;margin:6px 0 4px}
+.score strong{font-size:3rem;line-height:1;font-weight:700;letter-spacing:-.02em}
+.score span{color:var(--muted)}
+.rows{border-top:1px solid var(--line);margin:18px 0}
+.row{display:grid;grid-template-columns:1fr 110px 52px;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line);font-size:.93rem}
+.bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.row .n{text-align:right;font-family:var(--mono);font-size:.85rem;color:var(--muted)}
+.misses{margin-top:10px}
+.miss{padding:12px 0;border-bottom:1px solid var(--line)}
+.miss p{margin:0 0 4px}
+.miss .a{color:var(--ok);font-size:.93rem}
+.miss .y{color:var(--ko);font-size:.93rem}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <section id="start">
+    <div class="intro">
+      <h1>S02 – Admin Linux</h1>
+      <p class="muted" id="introTxt"></p>
+    </div>
+
+    <div class="block">
+      <div class="label"><span>Thèmes</span><button class="linkbtn" id="toggleAll">Tout décocher</button></div>
+      <div class="chips" id="themes"></div>
+    </div>
+
+    <div class="block">
+      <div class="label"><span>Nombre de questions</span><small id="avail"></small></div>
+      <div class="chips" id="counts"></div>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="go">Commencer</button>
+      <span class="best" id="best"></span>
+    </div>
+  </section>
+
+  <section id="quiz" hidden>
+    <div class="qhead"><span>S02 – Admin Linux</span><span><b id="qnum"></b> / <span id="qtot"></span></span></div>
+    <div class="track" id="track" aria-hidden="true"></div>
+    <div class="theme" id="qtheme"></div>
+    <div class="question" id="qtext"></div>
+    <div class="opts" id="opts"></div>
+    <div id="fb" hidden></div>
+    <div class="actions next">
+      <button class="primary" id="nextBtn" hidden>Question suivante</button>
+      <button class="linkbtn" id="quit">Arrêter</button>
+    </div>
+  </section>
+
+  <section id="result" hidden>
+    <div class="qhead"><span>S02 – Admin Linux</span></div>
+    <div class="score"><strong id="rscore"></strong><span id="rpct"></span></div>
+    <div class="track" id="rtrack" aria-hidden="true"></div>
+    <div class="rows" id="rows"></div>
+    <div class="actions">
+      <button class="primary" id="retryMiss">Revoir mes erreurs</button>
+      <button class="secondary" id="again">Nouveau quiz</button>
+    </div>
+    <div class="misses" id="misses"></div>
+  </section>
+
+</main>
+
+<script>
+/* Banque de questions : o[0] = bonne réponse (mélangée à l'affichage), `texte` = code */
+const STORE_KEY = "asrquiz-best-linux";
+const QUESTIONS = [
+/* ---------- Distribution et installation ---------- */
+{t:"Distribution et installation",q:"Depuis la décision de Red Hat fin 2020, sur quoi RHEL est-il basé ?",o:["CentOS Stream","Fedora directement","Debian","Oracle Linux"],e:"Fedora (upstream) → CentOS Stream (plateforme continue) → RHEL.",s:"Cours · Historique"},
+{t:"Distribution et installation",q:"Quelle distribution a été créée par le fondateur de CentOS après l'annonce de Red Hat ?",o:["Rocky Linux","Oracle Linux","AlmaLinux","Fedora"],e:"Gregory Kurtzer a lancé Rocky Linux. Oracle Linux est un autre fork de RHEL sans souscription.",s:"Cours · Les forks de RHEL"},
+{t:"Distribution et installation",q:"Combien de temps une version de RHEL est-elle supportée ?",o:["10 ans","3 ans","5 ans","18 mois"],e:"Avec possibilité de support 24/7 selon la souscription.",s:"Cours · Historique"},
+{t:"Distribution et installation",q:"Quel est le système de fichiers par défaut de RHEL (depuis la version 7) ?",o:["XFS","ext4","Btrfs","ext3"],e:"Système 64 bits journalisé, adapté aux gros disques avec beaucoup de fichiers.",s:"Cours · Installation / Systèmes de fichiers"},
+{t:"Distribution et installation",q:"Quel est le partitionnement minimum recommandé lors de l'installation ?",o:["Une racine `/` et un espace de swap","Une seule partition `/`","`/boot` uniquement","`/home` et `/var`"],e:"Sous Linux, il n'y a pas de fichier d'échange mais un espace de stockage dédié au swap.",s:"Cours · Partitionnement"},
+{t:"Distribution et installation",q:"Selon le cours, quelle taille de swap pour une machine avec 1,5 Go de RAM ?",o:["Égale à la RAM (1,5 Go)","RAM × 1,5","2 Go minimum","RAM × 2"],e:"RAM < 1 Go : ×1,5. RAM ≤ 2 Go : = RAM. RAM > 2 Go : 2 Go ou plus selon le besoin.",s:"Cours · Quantité de swap"},
+{t:"Distribution et installation",q:"Pourquoi `/boot` doit-il être sur une partition primaire ?",o:["Pour la compatibilité : il contient la fin du chargeur d'amorçage","Parce qu'il est en XFS","Pour pouvoir le chiffrer","Parce qu'il contient le swap"],e:"Le reste du système peut être en LVM.",s:"Cours · Partitionner les disques"},
+{t:"Distribution et installation",q:"Pourquoi le cours déconseille-t-il de n'avoir qu'un utilisateur sudo sans mot de passe root ?",o:["Impossible d'accéder au mode maintenance, qui demande le mot de passe root","sudo ne fonctionne pas sans root","L'utilisateur ne peut pas se connecter en SSH","Le système ne peut pas se mettre à jour"],e:"Correction : `sudo passwd root` pour activer le compte root.",s:"Cours · École du su / du sudo"},
+{t:"Distribution et installation",q:"Quel protocole permet l'installation par le réseau en récupérant un fichier via TFTP ?",o:["PXE","DHCPv6","NFS","iSCSI"],e:"La machine obtient une IP par BOOTP/DHCP puis télécharge le fichier d'amorçage en TFTP.",s:"Cours · Modes d'installation"},
+{t:"Distribution et installation",q:"Qu'est-ce que la HCL de Red Hat ?",o:["La liste des matériels certifiés compatibles","Le format des paquets","L'outil d'installation graphique","La licence de RHEL"],e:"Hardware Compatibility List : à vérifier avant d'installer.",s:"Cours · Installation"},
+
+/* ---------- Démarrage et GRUB ---------- */
+{t:"Démarrage et GRUB",q:"Quel est le premier programme exécuté par le BIOS/UEFI ?",o:["Le chargeur d'amorçage (GRUB2)","Le noyau","systemd","L'initramfs"],e:"Sa mission : lancer le noyau. Ensuite le noyau lance systemd (PID 1).",s:"Cours · Chargeur d'amorçage"},
+{t:"Démarrage et GRUB",q:"Où se trouve le stage 1 de GRUB sur un disque MBR ?",o:["Dans les 446 premiers octets du MBR","Dans `/boot/grub2/`","Dans la partition swap","Dans l'initramfs"],e:"Stage 1.5 : juste après, avant la première partition. Stage 2 : dans `/boot/grub2/`.",s:"Cours · Chargeur d'amorçage / MBR"},
+{t:"Démarrage et GRUB",q:"Quel fichier ne faut-il jamais éditer à la main ?",o:["`/boot/grub2/grub.cfg`","`/etc/default/grub`","`/etc/fstab`","`/etc/sysconfig/kernel`"],e:"Il est régénéré, par exemple à chaque mise à jour du noyau. On modifie `/etc/default/grub` ou `/etc/grub.d/`.",s:"Cours · Chargeur d'amorçage"},
+{t:"Démarrage et GRUB",q:"Tu as modifié `/etc/default/grub` mais rien ne change. Qu'as-tu oublié ?",o:["`grub2-mkconfig -o /boot/grub2/grub.cfg`","`systemctl restart grub`","`grub2-editenv list`","`dracut -f`"],e:"GRUB ne lit que `grub.cfg`, généré à partir de `/etc/default/grub`.",s:"Cours / TP03 · GRUB"},
+{t:"Démarrage et GRUB",q:"Quel répertoire contient les fichiers servant à construire les entrées du menu GRUB ?",o:["`/boot/loader/entries/`","`/etc/grub.d/entries/`","`/boot/efi/`","`/usr/lib/grub/`"],e:"Un fichier par noyau installé (format BLS).",s:"Cours · Chargeur d'amorçage"},
+{t:"Démarrage et GRUB",q:"Quels paramètres de `/etc/default/grub` affichent le menu 5 secondes à chaque démarrage ?",o:["`GRUB_TIMEOUT=5` et `GRUB_TIMEOUT_STYLE=menu`","`GRUB_DEFAULT=5`","`GRUB_HIDDEN=0`","`GRUB_MENU=show`"],e:"Sur OL8, il faut aussi `grub2-editenv - unset menu_auto_hide`, puis régénérer `grub.cfg`.",s:"TP03 · GRUB"},
+{t:"Démarrage et GRUB",q:"Quels sont les deux fichiers indispensables au démarrage du noyau ?",o:["`vmlinuz-<version>` et `initramfs-<version>.img`","`grub.cfg` et `fstab`","`System.map` et `config`","`vmlinuz` et `grubenv`"],e:"L'initramfs contient les pilotes et options nécessaires au démarrage (RAID, chiffrement, systèmes de fichiers).",s:"Cours · Fichiers du noyau"},
+{t:"Démarrage et GRUB",q:"Sur la ligne `linux`, que signifie le paramètre `ro` ?",o:["La racine est montée en lecture seule au démarrage","Le système démarre en mode rescue","Le noyau est en lecture seule","Le réseau est désactivé"],e:"Nécessaire pour pouvoir vérifier l'intégrité du système de fichiers. Il ne faut pas le changer.",s:"Cours · Ligne de lancement du noyau"},
+{t:"Démarrage et GRUB",q:"À quoi sert `crashkernel=auto` sur la ligne du noyau ?",o:["Activer kdump, qui génère un dump mémoire en cas de kernel panic","Redémarrer automatiquement en cas de crash","Démarrer sur le noyau de secours","Désactiver les logs du noyau"],e:"kdump explique aussi les initramfs `*kdump.img` dans `/boot`.",s:"Cours · Ligne de lancement du noyau"},
+{t:"Démarrage et GRUB",q:"Que font les options `rhgb quiet` ?",o:["Démarrage graphique (Plymouth) et noyau non verbeux","Mode rescue et réseau coupé","Chargement du RAID","Activation de SELinux"],e:"On les retire en maintenance pour voir les messages de démarrage.",s:"Cours · Ligne de lancement du noyau"},
+{t:"Démarrage et GRUB",q:"Combien de noyaux affiche par défaut le menu GRUB au maximum selon le cours ?",o:["4","1","2","10"],e:"Côté dnf, `installonly_limit=3` limite le nombre de noyaux conservés.",s:"Cours · GRUB au démarrage"},
+{t:"Démarrage et GRUB",q:"Comment empêcher la modification des entrées GRUB en production ?",o:["`grub2-setpassword`","`chmod 600 /boot/grub2/grub.cfg`","`GRUB_TIMEOUT=0`","`grub2-editenv - unset menu_auto_hide`"],e:"Sans mot de passe GRUB, un accès à la console suffit pour obtenir un shell root.",s:"TP03 · GRUB"},
+
+/* ---------- Mode maintenance ---------- */
+{t:"Mode maintenance",q:"Dans le menu GRUB, quelle touche permet d'éditer l'entrée sélectionnée ?",o:["`e`","`c`","`Tab`","`F2`"],e:"On démarre ensuite avec Ctrl+X. Échap annule, Ctrl+C ouvre l'invite GRUB.",s:"Cours · Mode maintenance"},
+{t:"Mode maintenance",q:"Quel paramètre ajouter pour démarrer en mode maintenance (première méthode du cours) ?",o:["`single`","`init=/bin/bash`","`rd.break`","`ro`"],e:"Équivalent : `systemd.unit=rescue.target`. Le mot de passe root est demandé.",s:"Cours · Première méthode avec GRUB"},
+{t:"Mode maintenance",q:"Comment sortir du mode maintenance (rescue.target) ?",o:["Ctrl+D","Ctrl+X","Ctrl+C","Échap"],e:"Ou `systemctl default`. Le démarrage se poursuit vers la cible par défaut.",s:"Cours · Première méthode avec GRUB"},
+{t:"Mode maintenance",q:"Quelle disposition de clavier utilise GRUB par défaut ?",o:["QWERTY","AZERTY","Celle du système installé","Dvorak"],e:"Vérifier chaque caractère tapé à l'écran.",s:"Cours · Mode maintenance"},
+{t:"Mode maintenance",q:"Quand utiliser la méthode `init=/bin/bash` plutôt que `single` ?",o:["Quand on ne connaît pas le mot de passe root ou qu'il n'y en a pas (mode sudo)","Toujours, elle est plus propre","Pour changer la cible par défaut","Pour mettre à jour le noyau"],e:"`single` demande le mot de passe root.",s:"Cours · Deuxième méthode avec GRUB"},
+{t:"Mode maintenance",q:"Que fait `init=/bin/bash` sur la ligne du noyau ?",o:["Lance bash comme PID 1 à la place de systemd, sans authentification","Démarre en mode rescue avec mot de passe root","Ouvre un shell dans l'initramfs","Démarre en multi-user.target"],e:"Aucun service n'est lancé. Méthode utilisée pour réinitialiser un mot de passe root perdu.",s:"Cours / TP03"},
+{t:"Mode maintenance",q:"Dans un shell `init=/bin/bash`, pourquoi lancer `mount -o remount,rw /` ?",o:["La ligne `linux` contient `ro` : la racine est en lecture seule","systemd démonte la racine avant de lancer bash","Pour activer SELinux","Pour monter `/boot`"],e:"Sans ça, aucune modification n'est possible.",s:"Cours · Deuxième méthode avec GRUB"},
+{t:"Mode maintenance",q:"Pourquoi créer `/.autorelabel` avant de redémarrer depuis `init=/bin/bash` ?",o:["Pour que SELinux remette les bons contextes au démarrage suivant","Pour réactiver le réseau","Pour régénérer `grub.cfg`","Pour forcer un fsck"],e:"Le démarrage suivant est plus long, puis la machine redémarre une fois de plus.",s:"Cours · Deuxième méthode avec GRUB"},
+{t:"Mode maintenance",q:"Pourquoi lancer `sync` à la fin de la procédure `init=/bin/bash` ?",o:["Pour écrire sur le disque les données encore en cache en RAM","Pour synchroniser l'heure","Pour répliquer vers un autre serveur","Pour recharger systemd"],e:"Surtout si on éteint ensuite la machine brutalement.",s:"Cours · Deuxième méthode avec GRUB"},
+{t:"Mode maintenance",q:"Un fichier créé depuis `init=/bin/bash` sans `load_policy -i` ni `/.autorelabel` a quel contexte SELinux ?",o:["`unlabeled_t`","`admin_home_t`","`unconfined_t`","`user_home_t`"],e:"Grave si c'est `/etc/shadow` : plus personne ne se connecte. Correction : `restorecon -v <fichier>`.",s:"TP03 · GRUB"},
+{t:"Mode maintenance",q:"Comment poursuivre proprement le démarrage depuis un shell `init=/bin/bash` ?",o:["`exec /sbin/init`","`exit`","`reboot`","`systemctl default`"],e:"`exit` provoque un kernel panic (on quitte le PID 1), `reboot` échoue car systemd n'est pas lancé.",s:"TP03 · GRUB"},
+{t:"Mode maintenance",q:"Avec le média d'installation, quel menu permet de réparer un système installé ?",o:["Troubleshooting → Rescue","Install → Repair","Boot → Safe mode","Tools → Recovery"],e:"Le système installé est monté sous `/mnt/sysimage` (`chroot /mnt/sysimage`).",s:"Cours · Méthode du média d'installation"},
+
+/* ---------- systemd et services ---------- */
+{t:"systemd et services",q:"Quel PID porte systemd ?",o:["1","0","100","Variable à chaque démarrage"],e:"Premier programme lancé par le noyau, il démarre les services en parallèle selon leurs dépendances.",s:"Cours · systemd"},
+{t:"systemd et services",q:"Depuis quelle version de RHEL systemd remplace-t-il les scripts System V ?",o:["RHEL 7","RHEL 5","RHEL 8","RHEL 9"],e:"RHEL 8 garde une compatibilité avec les services System V.",s:"Cours · systemd"},
+{t:"systemd et services",q:"Quelle cible démarre le système en mode console sur une machine où l'interface graphique est installée ?",o:["`multi-user.target`","`graphical.target`","`rescue.target`","`console.target`"],e:"`graphical.target` inclut `multi-user.target` plus le gestionnaire de connexion graphique.",s:"Cours · Les différentes cibles"},
+{t:"systemd et services",q:"Quelle commande fait démarrer le système en mode console au prochain démarrage ?",o:["`systemctl set-default multi-user.target`","`systemctl isolate multi-user.target`","`systemctl enable multi-user.target`","`systemctl start multi-user.target`"],e:"Elle remplace le lien symbolique `/etc/systemd/system/default.target`.",s:"Cours / TP04"},
+{t:"systemd et services",q:"Comment lancer l'interface graphique maintenant, sans redémarrer ni changer la cible par défaut ?",o:["`systemctl isolate graphical.target`","`systemctl set-default graphical.target`","`startx --default`","`systemctl reload graphical.target`"],e:"`isolate` démarre ce que la cible requiert et arrête le reste.",s:"Cours / TP04"},
+{t:"systemd et services",q:"Que fait concrètement `systemctl enable smb.service` ?",o:["Crée un lien symbolique dans `/etc/systemd/system/multi-user.target.wants/`","Démarre le service immédiatement","Installe le paquet","Copie le fichier d'unité dans `/usr/lib`"],e:"`disable` supprime ce lien. Pour démarrer en même temps : `enable --now`.",s:"Cours · Activer/désactiver un service"},
+{t:"systemd et services",q:"Quelle différence entre `systemctl disable` et `systemctl mask` ?",o:["`mask` empêche aussi tout démarrage manuel ou par dépendance","`disable` arrête le service, `mask` au prochain boot","Aucune, ce sont des alias","`mask` supprime le paquet"],e:"`mask` lie l'unité à `/dev/null`. Annulation : `unmask`.",s:"TP04 · Services"},
+{t:"systemd et services",q:"Tu lances `systemctl disable crond` sur un service en cours. Que se passe-t-il ?",o:["Il continue de tourner jusqu'au prochain redémarrage","Il s'arrête immédiatement","Il redémarre","La commande échoue"],e:"Pour arrêter en même temps : `systemctl disable --now crond`.",s:"TP04 · Services"},
+{t:"systemd et services",q:"Quelle commande remet l'activation d'un service à la valeur prévue par la distribution ?",o:["`systemctl preset <service>`","`systemctl reset <service>`","`systemctl default <service>`","`systemctl reenable --vendor <service>`"],e:"Elle applique la politique de `/usr/lib/systemd/system-preset/`.",s:"TP04 · Services"},
+{t:"systemd et services",q:"Où l'administrateur doit-il placer ses fichiers d'unités personnalisés ?",o:["`/etc/systemd/system/`, prioritaire sur `/usr/lib/systemd/system/`","`/usr/lib/systemd/system/`","`/var/lib/systemd/`","`/run/systemd/system/`"],e:"Un fichier de même nom dans `/etc/systemd/system` devient prioritaire. On ne modifie jamais `/usr/lib`.",s:"Cours · Fichiers personnalisés"},
+{t:"systemd et services",q:"Quelle option de `systemctl list-units` affiche aussi les unités chargées mais inactives ?",o:["`--all`","`--inactive`","`-a -i`","`--full`"],e:"`list-unit-files` liste tous les services installés et leur état d'activation.",s:"Cours · Lister les unités"},
+{t:"systemd et services",q:"Pourquoi utiliser `shutdown` plutôt que `systemctl isolate poweroff.target` sur un serveur de production ?",o:["Pour différer l'arrêt et prévenir les utilisateurs connectés par un message","Parce que `isolate` ne fonctionne pas","Parce que `shutdown` est plus rapide","Pour éviter le fsck"],e:"`-h` : arrêter, `-r` : redémarrer, `-c` : annuler un shutdown programmé.",s:"Cours · Éteindre / redémarrer"},
+{t:"systemd et services",q:"Pourquoi les durées de `systemd-analyze blame` ne s'additionnent-elles pas ?",o:["Les services démarrent en parallèle","Elles sont arrondies","Elles incluent le temps du noyau","Elles ne comptent que les services activés"],e:"Pour voir ce qui retarde réellement la cible : `systemd-analyze critical-chain`.",s:"TP04 · Services"},
+{t:"systemd et services",q:"Passer de `graphical.target` à `multi-user.target` réduit le temps de démarrage. Quelle partie diminue ?",o:["Le userspace (systemd et services)","Le noyau","L'initramfs","Le BIOS"],e:"Noyau et initramfs se chargent avant systemd : leur durée ne dépend pas de la cible.",s:"TP04 · Services"},
+{t:"systemd et services",q:"Quel fichier configure le serveur SSH ?",o:["`/etc/ssh/sshd_config`","`/etc/ssh/ssh_config`","`/usr/lib/systemd/system/sshd.service`","`/etc/sysconfig/sshd`"],e:"Le « d » = daemon. `ssh_config` configure le client. Après modification : `sshd -t` puis `systemctl reload sshd`.",s:"TP04 · Services"},
+{t:"systemd et services",q:"Sur RHEL, comment s'appelle le service cron ?",o:["`crond`","`cron`","`anacron`","`crontab`"],e:"Sur Debian/Ubuntu, il s'appelle `cron`.",s:"TP04 · Services"},
+{t:"systemd et services",q:"Tu as ajouté une règle avec `firewall-cmd --add-service=http --permanent`. Que manque-t-il ?",o:["`firewall-cmd --reload`","`systemctl restart NetworkManager`","Rien, elle est active","`firewall-cmd --save`"],e:"`--permanent` écrit la configuration permanente sans toucher à celle en cours.",s:"TP04 · Services"},
+
+/* ---------- Réseau ---------- */
+{t:"Réseau",q:"Quelle commande affiche les adresses IP des interfaces ?",o:["`ip a`","`ip r`","`ifconfig -r`","`nmcli dns`"],e:"`ip r` affiche les routes, dont la route par défaut.",s:"Cours · Gestion basique du réseau"},
+{t:"Réseau",q:"Où voir les serveurs DNS utilisés par le système ?",o:["`/etc/resolv.conf`","`/etc/hosts`","`/etc/sysconfig/dns`","`/etc/nsswitch.conf`"],e:"Sur OL8, ce fichier est généré par NetworkManager : ne pas le modifier à la main.",s:"Cours · Gestion basique du réseau"},
+{t:"Réseau",q:"Quel service gère le réseau sur RHEL 8 ?",o:["NetworkManager","networkd","ifupdown","dhclient"],e:"Outils : `nmcli`, `nmtui`, ou l'outil graphique (Activités → Réseau).",s:"Cours · Configuration sans interface graphique"},
+{t:"Réseau",q:"Quels outils configurent le réseau d'un serveur sans interface graphique ?",o:["`nmtui` ou `nmcli`","`netplan`","`ifconfig` uniquement","`system-config-network`"],e:"`nmtui` est une interface semi-graphique en console, `nmcli` la ligne de commande.",s:"Cours · Configuration sans interface graphique"},
+{t:"Réseau",q:"Après `nmcli connection modify ens160 ipv4.method manual ...`, comment appliquer la configuration ?",o:["`nmcli connection up ens160`","`systemctl reload network`","`ip link set ens160 up`","`nmcli device reapply --permanent`"],e:"La modification est enregistrée dans le profil, il faut le réactiver pour l'appliquer.",s:"TP05 · Réseau"},
+{t:"Réseau",q:"En IPv4 Manual dans l'outil graphique, le bouton DNS Automatic est resté activé. Conséquence ?",o:["Aucun serveur DNS : la résolution de noms échoue","Les DNS du DHCP sont utilisés","Le DNS 8.8.8.8 est utilisé","L'adresse IP n'est pas appliquée"],e:"Sans DHCP, plus rien ne fournit de DNS automatiquement.",s:"TP05 · Réseau"},
+{t:"Réseau",q:"Dans la sortie de `ip a`, que signifie `valid_lft forever` ?",o:["L'adresse est fixe, sans bail DHCP","L'interface est désactivée","L'adresse est IPv6","L'adresse est en conflit"],e:"Avec le DHCP, on voit une durée en secondes.",s:"TP05 · Réseau"},
+{t:"Réseau",q:"Un `ping` entre les deux VM affiche `ttl=64`. Qu'en déduis-tu ?",o:["Aucun routeur n'a été traversé","64 routeurs ont été traversés","Le paquet a été filtré","La VM cible est sous Windows"],e:"64 est la valeur initiale sous Linux. Vers github.com, `ttl=45` = environ 19 routeurs.",s:"TP05 · Réseau"},
+{t:"Réseau",q:"`host www.github.com` indique « is an alias for github.com ». Quel type d'enregistrement DNS ?",o:["CNAME","A","PTR","MX"],e:"A = nom → IPv4, PTR = adresse → nom, MX = serveur de messagerie.",s:"TP05 · Réseau"},
+{t:"Réseau",q:"Quel paquet fournit `host`, `dig` et `nslookup` ?",o:["`bind-utils`","`net-tools`","`iproute`","`dnsmasq`"],e:"Sans lui, `getent hosts` et `ping` suffisent à tester la résolution.",s:"TP05 · Réseau"},
+
+/* ---------- Paquets ---------- */
+{t:"Paquets (dnf, rpm)",q:"Que contient un paquet RPM ?",o:["Le logiciel compilé, des scripts post-installation, la liste des fichiers et une signature GPG","Uniquement le code source","Un script d'installation seul","Une image disque"],e:"La signature garantit que le paquet n'a pas été modifié et vient bien de la distribution.",s:"Cours · Les paquets"},
+{t:"Paquets (dnf, rpm)",q:"Qu'est-ce qu'un dépôt (repository) ?",o:["Un site web hébergeant des RPM signés et une petite base de données qui les liste","Un dossier local de sauvegarde","Un groupe de paquets","Un serveur de licences"],e:"Un miroir est une liste de serveurs hébergeant les mêmes dépôts.",s:"Cours · Les dépôts / miroirs"},
+{t:"Paquets (dnf, rpm)",q:"Dans quel répertoire sont déclarés les dépôts ?",o:["`/etc/yum.repos.d/` (fichiers `.repo`)","`/etc/dnf/repos/`","`/var/lib/rpm/`","`/etc/apt/sources.list.d/`"],e:"La configuration générale est dans `/etc/dnf/dnf.conf` (lien `/etc/yum.conf`).",s:"Cours · Fichiers de configuration"},
+{t:"Paquets (dnf, rpm)",q:"Dans un fichier `.repo`, quelle affirmation est vraie ?",o:["`mirrorlist` et `baseurl` ne peuvent pas être actifs en même temps","`baseurl` pointe vers une liste de miroirs","`gpgcheck=0` est recommandé","Les fichiers `.bak` sont aussi lus par dnf"],e:"`mirrorlist` = liste de serveurs, `baseurl` = URL directe. Sur OL8, les dépôts utilisent déjà `baseurl`.",s:"Cours · Structure / TP06"},
+{t:"Paquets (dnf, rpm)",q:"Si la ligne `enabled=` est absente d'un fichier `.repo`, le dépôt est-il actif ?",o:["Oui, il est actif par défaut","Non, il est désactivé","Seulement pour root","Seulement avec `--enablerepo`"],e:"`enabled=0` pour le désactiver explicitement.",s:"Cours · Structure des repos"},
+{t:"Paquets (dnf, rpm)",q:"Où dnf lit-il les informations quand tu lances `dnf search` ou `dnf info` ?",o:["Dans son cache local (base de données téléchargée)","Directement sur les dépôts à chaque fois","Dans `/var/lib/rpm` uniquement","Sur Internet via un moteur de recherche"],e:"Le cache est mis à jour automatiquement quand il est trop vieux (6 h par défaut).",s:"Cours · Utilisation de dnf"},
+{t:"Paquets (dnf, rpm)",q:"Quelle commande est le vrai test de connexion aux dépôts ?",o:["`dnf makecache`","`dnf repolist`","`ping yum.oracle.com`","`dnf clean all`"],e:"`makecache` télécharge les métadonnées. `repolist` lit seulement la configuration.",s:"TP06 · Logiciels"},
+{t:"Paquets (dnf, rpm)",q:"Quel inconvénient partagent dnf et rpm selon le cours ?",o:["Impossible d'avoir plusieurs versions du même logiciel","Pas de gestion des signatures","Pas de suppression possible","Pas d'historique"],e:"L'installation depuis les sources permet, elle, d'avoir la dernière version.",s:"Cours · dnf / rpm"},
+{t:"Paquets (dnf, rpm)",q:"Quelle est la principale différence entre `rpm` et `dnf` ?",o:["`rpm` ne télécharge pas les dépendances","`rpm` ne vérifie jamais les signatures","`dnf` ne sait pas installer un fichier local","`dnf` ne gère pas les groupes"],e:"dnf utilise rpm en interne. Pour un RPM local avec dépendances : `dnf install ./paquet.rpm`.",s:"Cours / TP06"},
+{t:"Paquets (dnf, rpm)",q:"Pourquoi Red Hat recommande-t-il `rpm -U` plutôt que `rpm -i` ?",o:["`-U` installe ou met à jour selon le cas","`-U` est plus rapide","`-i` ne vérifie pas les signatures","`-i` est obsolète et ne fonctionne plus"],e:"`-v` verbeux, `-h` barre de progression.",s:"Cours · Commande de bas niveau"},
+{t:"Paquets (dnf, rpm)",q:"Comment supprimer un paquet avec rpm ?",o:["`rpm -e <nom court>`","`rpm -d <fichier.rpm>`","`rpm --remove-all`","`rpm -U --delete`"],e:"rpm prévient si le paquet est une dépendance d'un autre.",s:"Cours · Commande de bas niveau"},
+{t:"Paquets (dnf, rpm)",q:"Que fait `rpm -qpR paquet.rpm` ?",o:["Liste les dépendances d'un fichier `.rpm` non installé","Supprime le paquet","Liste les fichiers du paquet installé","Vérifie la signature"],e:"`-p` interroge un fichier. `-qpi` = infos, `-qpl` = fichiers.",s:"Cours / TP06"},
+{t:"Paquets (dnf, rpm)",q:"Comment savoir quel paquet fournit le fichier `day.jpg` ?",o:["`dnf provides '*/day.jpg'`","`rpm -qa day.jpg`","`dnf search day.jpg`","`find / -name day.jpg`"],e:"Les guillemets empêchent le shell d'interpréter l'étoile. Pour un fichier présent : `rpm -qf <chemin>`.",s:"Cours / TP06"},
+{t:"Paquets (dnf, rpm)",q:"Quelle commande installe un groupe de paquets ?",o:["`dnf groupinstall \"Development Tools\"`","`dnf install --group-all`","`rpm -G \"Development Tools\"`","`dnf install group:Development`"],e:"Syntaxe équivalente : `dnf install @\"Development Tools\"`.",s:"Cours · Installer"},
+{t:"Paquets (dnf, rpm)",q:"Quelle commande annule une transaction dnf ?",o:["`dnf history undo <ID>`","`dnf rollback`","`dnf remove --last`","`rpm --undo`"],e:"`dnf history` liste les transactions, `dnf history info <ID>` les détaille.",s:"Cours · Gérer l'historique"},
+{t:"Paquets (dnf, rpm)",q:"Pourquoi `dnf update kernel` affiche-t-il « Installing » et non « Upgrading » ?",o:["Le noyau est un paquet installonly : le nouveau s'installe à côté de l'ancien","Le noyau n'était pas installé","dnf installe un noyau UEK en plus","C'est une erreur d'affichage"],e:"L'ancien reste disponible dans GRUB. dnf en garde au plus `installonly_limit=3`.",s:"TP06 · Logiciels"},
+{t:"Paquets (dnf, rpm)",q:"Le nouveau noyau RHCK installé n'est pas devenu le noyau par défaut. Pourquoi ?",o:["`DEFAULTKERNEL=kernel-uek-core` dans `/etc/sysconfig/kernel`","`UPDATEDEFAULT=no`","`/boot` est plein","GRUB n'a pas été régénéré"],e:"Seul un nouveau noyau UEK devient le défaut. Correction : `grubby --set-default /boot/vmlinuz-<version>`.",s:"TP06 · Logiciels"},
+{t:"Paquets (dnf, rpm)",q:"Quelle différence entre les noyaux UEK et RHCK d'Oracle Linux ?",o:["UEK est optimisé par Oracle, RHCK est identique à celui de RHEL","UEK est pour les postes, RHCK pour les serveurs","RHCK est plus récent","Aucune différence"],e:"UEK = Unbreakable Enterprise Kernel, démarré par défaut. RHCK = Red Hat Compatible Kernel.",s:"TP06 · Logiciels"},
+{t:"Paquets (dnf, rpm)",q:"Avant d'installer un noyau, pourquoi vérifier `df -h /boot` ?",o:["Un noyau et ses initramfs prennent environ 95 Mo","`/boot` doit être vide","Le noyau s'installe dans `/boot/efi`","Pour vérifier le système de fichiers"],e:"Avec un `/boot` de 500 Mio, il ne restait que 126 Mo.",s:"TP06 · Logiciels"},
+{t:"Paquets (dnf, rpm)",q:"`dnf check-update` renvoie le code de sortie 100. Qu'est-ce que ça signifie ?",o:["Des mises à jour sont disponibles","Une erreur de connexion","Aucune mise à jour","Le cache est vide"],e:"`0` = rien à mettre à jour. Pratique dans les scripts.",s:"TP06 · Logiciels"},
+{t:"Paquets (dnf, rpm)",q:"Que signifie `noarch` dans le nom d'un paquet ?",o:["Paquet sans code compilé, identique sur toutes les architectures","Paquet non signé","Paquet obsolète","Paquet source"],e:"Images, scripts, documentation. Le paquet source, lui, porte l'architecture `src`.",s:"TP06 · Logiciels"},
+
+/* ---------- Compilation ---------- */
+{t:"Compilation",q:"Quels sont les avantages de l'installation depuis les sources ?",o:["Dernière version du logiciel et haute configurabilité","Gestion automatique des dépendances","Mises à jour automatiques","Signature GPG garantie"],e:"Inconvénients : outils de compilation, dépendances à gérer, scripts de service à créer soi-même.",s:"Cours · Installation à partir des sources"},
+{t:"Compilation",q:"Quel est le bon ordre des étapes d'une compilation ?",o:["Lire la doc → `./configure` → `make` → `make install`","`make` → `./configure` → `make install`","`make install` → `make` → `./configure`","`./configure` → `make install` → `make`"],e:"`./configure` génère le Makefile, `make` compile, `make install` copie dans l'arborescence.",s:"Cours · Compilation"},
+{t:"Compilation",q:"Quelle étape de la compilation doit être faite en root ?",o:["Uniquement `make install`","Toutes","`./configure`","`make`"],e:"Règle du cours : toujours compiler sous un utilisateur non root.",s:"Cours · Compilation"},
+{t:"Compilation",q:"Que génère l'étape `./configure` ?",o:["Un fichier Makefile","Le binaire final","Le paquet RPM","La documentation"],e:"Elle vérifie l'architecture, le compilateur et les bibliothèques nécessaires.",s:"Cours · Compilation"},
+{t:"Compilation",q:"Comment se nomment généralement les paquets de dépendance de compilation ?",o:["Avec le suffixe `-devel`","Avec le suffixe `-src`","Avec le préfixe `lib-`","Avec le suffixe `-bin`"],e:"Ils fournissent les fichiers d'en-tête. Ex. : `ncurses-devel` pour compiler VIM.",s:"Cours · Les dépendances / TP06"},
+{t:"Compilation",q:"La compilation échoue sur « Couldn't found superlib.so ». Comment trouver le paquet ?",o:["`dnf provides \"*/superlib.so\"`","`rpm -e superlib`","`make superlib`","`ldconfig -i superlib`"],e:"Souvent à répéter plusieurs fois par compilation.",s:"Cours · Les dépendances"},
+{t:"Compilation",q:"Quels fichiers un packageur produit-il à partir des sources ?",o:["Les RPM (32 et 64 bits) et le `src.rpm`","Uniquement un tar.gz","Un exécutable Windows","Un Makefile"],e:"Après une phase de test, le RPM est intégré au dépôt.",s:"Cours · Parcours d'un logiciel"},
+{t:"Compilation",q:"TurboVNC est installé mais `vncviewer` renvoie « command not found ». Solution retenue en TP ?",o:["Un lien symbolique dans `/usr/local/bin`","Installer tigervnc","Relancer `rpm -Uvh`","Redémarrer la machine"],e:"Le binaire est dans `/opt/TurboVNC/bin`, hors du PATH. Alternative : un script dans `/etc/profile.d/`.",s:"TP06 · Logiciels"},
+
+/* ---------- Partitionnement ---------- */
+{t:"Partitionnement",q:"Combien de partitions primaires la table MBR peut-elle décrire ?",o:["4","8","128","56"],e:"Pour aller au-delà, une des 4 devient une partition étendue contenant des partitions logiques.",s:"Cours · Norme MBR"},
+{t:"Partitionnement",q:"Quelle est la taille maximale d'une partition en MBR ?",o:["2,2 To","16 To","9,4 Zo","512 Go"],e:"C'est la principale limite du MBR, levée par GPT.",s:"Cours · Norme MBR"},
+{t:"Partitionnement",q:"Combien de partitions permet GPT par défaut ?",o:["128","4","56","Illimité"],e:"Limite théorique des partitions et disques : 9,4 Zo.",s:"Cours · Norme GPT"},
+{t:"Partitionnement",q:"Un disque a 2 partitions primaires et une étendue contenant 3 logiques. Comment s'appelle la première logique ?",o:["`/dev/sdb5`","`/dev/sdb4`","`/dev/sdb3`","`/dev/sdb1l`"],e:"Les numéros 1 à 4 sont réservés aux partitions principales et étendues.",s:"Cours · Nommage des partitions"},
+{t:"Partitionnement",q:"Que désigne `/dev/nvme0n1p2` ?",o:["La partition 2 du disque 1 du contrôleur NVMe 0","Le disque 2 du contrôleur 1","La deuxième carte réseau","Le volume logique 2"],e:"nvme0 = périphérique, n1 = disque, p2 = partition.",s:"Cours · Nommage des disques"},
+{t:"Partitionnement",q:"Quel type de partition fdisk faut-il donner à une partition destinée à LVM ?",o:["`8e` (Linux LVM)","`83` (Linux)","`82` (swap)","`05` (étendue)"],e:"Commande `t` dans fdisk. C'est une étiquette, mais une bonne pratique.",s:"Cours / TP07"},
+{t:"Partitionnement",q:"Dans `fdisk`, quand les modifications sont-elles écrites sur le disque ?",o:["Uniquement avec `w`","À chaque commande `n`","Avec `p`","Automatiquement à la sortie"],e:"`q` quitte sans rien modifier.",s:"Cours / TP07"},
+{t:"Partitionnement",q:"Dans fdisk, comment créer une partition de 6 Gio ?",o:["`n`, puis au dernier secteur `+6G`","`n 6G`","`t 6G`","`p +6G`"],e:"Laisser le système choisir le numéro et le premier secteur.",s:"Cours / TP07"},
+{t:"Partitionnement",q:"Quelle commande affiche la table de partitions d'un disque sans l'ouvrir en édition ?",o:["`fdisk -l /dev/sda`","`fdisk -p /dev/sda`","`parted --edit`","`mkfs -l`"],e:"`parted` est scriptable, `sfdisk` permet de copier une table de partitions.",s:"Cours · fdisk"},
+{t:"Partitionnement",q:"Un disque ajouté à chaud dans VMware n'apparaît pas dans `lsblk`. Que faire ?",o:["`echo \"- - -\" > /sys/class/scsi_host/hostX/scan`","`partprobe`","`systemctl restart udev`","`mount -a`"],e:"On relance la détection du bus SCSI sur tous les canaux, cibles et LUN.",s:"TP07 · Stockage"},
+
+/* ---------- LVM ---------- */
+{t:"LVM",q:"Quel problème du partitionnement classique LVM résout-il ?",o:["L'agrandissement à chaud, sans besoin d'espace contigu","La limite de 4 partitions primaires","Le chiffrement des disques","La vitesse d'écriture"],e:"Une partition classique ne s'agrandit qu'à froid et avec de l'espace contigu.",s:"Cours · LVM"},
+{t:"LVM",q:"Dans quel ordre crée-t-on les éléments LVM ?",o:["PV (`pvcreate`) → VG (`vgcreate`) → LV (`lvcreate`)","VG → PV → LV","LV → VG → PV","PV → LV → VG"],e:"Puis on formate le LV avec `mkfs`.",s:"Cours · Créer des partitions LVM"},
+{t:"LVM",q:"Qu'est-ce qu'un groupe de volumes (VG) ?",o:["Une réserve d'espace regroupant un ou plusieurs volumes physiques","Un disque physique","Un système de fichiers","Une partition étendue"],e:"On y découpe des volumes logiques (LV).",s:"Cours · LVM"},
+{t:"LVM",q:"Quels sont les deux chemins pour accéder au volume logique `lv1` du VG `vggroup1` ?",o:["`/dev/vggroup1/lv1` et `/dev/mapper/vggroup1-lv1`","`/dev/lv1` et `/dev/vg/lv1`","`/mnt/lv1` et `/dev/sdb1`","`/lvm/vggroup1/lv1` uniquement"],e:"Il apparaît aussi en `/dev/dm-X`.",s:"Cours · Créer des partitions LVM"},
+{t:"LVM",q:"Quelle différence entre `lvextend -L +400M` et `lvextend -L 1G` ?",o:["`+400M` ajoute 400 Mo, `1G` fixe la taille à 1 Go","Aucune différence","`+400M` réduit le volume","`1G` ajoute 1 Go"],e:"`lvreduce` permet de réduire un LV.",s:"Cours · Agrandir une partition LVM"},
+{t:"LVM",q:"Quelle différence entre `lvcreate -L` et `lvcreate -l` ?",o:["`-L` = taille absolue, `-l` = extents ou pourcentage (`100%FREE`)","`-L` = logique, `-l` = linéaire","Aucune","`-l` = taille en Go"],e:"Exemple : `lvextend -l +100%FREE`.",s:"TP07 · Stockage"},
+{t:"LVM",q:"Après `lvextend` sans `-r`, `df` affiche toujours l'ancienne taille. Pourquoi ?",o:["Le LV est agrandi mais pas le système de fichiers","Il faut démonter puis remonter","Il faut redémarrer","`df` met du temps à se rafraîchir"],e:"`-r` appelle `xfs_growfs` ou `resize2fs`. Le cours le rappelle : le FS ne suit pas automatiquement.",s:"Cours / TP07"},
+{t:"LVM",q:"Quelle commande ajoute un volume physique à un groupe de volumes existant ?",o:["`vgextend <VG> <PV>`","`pvcreate <VG>`","`lvextend <VG>`","`vgcreate --add`"],e:"Le PV doit d'abord être initialisé avec `pvcreate`.",s:"Cours / TP07"},
+{t:"LVM",q:"Quelles commandes donnent un résumé des PV, VG et LV ?",o:["`pvs`, `vgs`, `lvs`","`pvdisplay`, `vgdisplay`, `lvdisplay`","`lsblk -l`","`df -lvm`"],e:"Les commandes `*display` donnent le détail.",s:"Cours · Afficher les informations LVM"},
+{t:"LVM",q:"Quelle est l'unité d'allocation de LVM par défaut ?",o:["L'extent de 4 Mio","Le bloc de 4 Kio","Le secteur de 512 octets","Le cylindre"],e:"`-l` compte en extents.",s:"TP07 · Stockage"},
+{t:"LVM",q:"Un LV `/var` réparti sur deux disques. Quel risque ?",o:["Si un des disques tombe en panne, le LV est perdu","Aucun, LVM duplique les données","Le LV passe en lecture seule","Les performances sont divisées par deux"],e:"LVM n'est pas du RAID. En production, on place du RAID sous LVM.",s:"TP07 · Stockage"},
+{t:"LVM",q:"Peut-on créer un PV sur un disque entier, sans table de partitions ?",o:["Oui, c'est courant pour un disque de données dédié à LVM","Non, une partition est obligatoire","Seulement en GPT","Seulement pour le disque système"],e:"Le cours précise d'effacer d'abord les 512 premiers octets du disque.",s:"Cours / TP07"},
+
+/* ---------- Systèmes de fichiers ---------- */
+{t:"Systèmes de fichiers",q:"Que contient le superbloc ?",o:["Les informations vitales du système de fichiers (taille des blocs, nombre de montages…)","Les données des fichiers","Les noms des fichiers","Le journal"],e:"Il est dupliqué à plusieurs endroits par sécurité.",s:"Cours · Le superbloc"},
+{t:"Systèmes de fichiers",q:"Quelle information un inode ne contient-il PAS ?",o:["Le nom du fichier","Les droits d'accès","L'UID du propriétaire","Les dates atime, ctime, mtime"],e:"Le nom est stocké dans le répertoire qui contient le fichier.",s:"Cours · Inodes"},
+{t:"Systèmes de fichiers",q:"Que se passe-t-il quand le nombre de liens physiques d'un inode tombe à zéro ?",o:["Le fichier est considéré comme supprimé","Le fichier devient caché","Le fichier passe en lecture seule","Rien"],e:"Chaque lien physique est un nom pointant vers le même inode.",s:"Cours · Inodes"},
+{t:"Systèmes de fichiers",q:"Quelle date d'un inode change quand on modifie le contenu d'un fichier ?",o:["`mtime`","`atime`","`ctime` uniquement","Aucune"],e:"atime = dernier accès, ctime = changement des informations de l'inode (droits, propriétaire…).",s:"Cours · Inodes"},
+{t:"Systèmes de fichiers",q:"Quelle est la différence entre ext2 et ext3 ?",o:["La journalisation","La taille maximale des fichiers","Le support des ACL","ext3 est en 64 bits"],e:"Le journal améliore la récupération après un arrêt brutal.",s:"Cours · Système de fichiers ext"},
+{t:"Systèmes de fichiers",q:"Quel avantage principal a ext4 selon le cours ?",o:["Peu sujet à la fragmentation grâce à la pré-allocation de blocs contigus","Il peut être agrandi et réduit à chaud","Il ne nécessite pas de fsck","Il n'a pas de limite de taille"],e:"Taille max de fichier : 16 Tio avec des blocs de 4 Ko.",s:"Cours · L'ext4"},
+{t:"Systèmes de fichiers",q:"Qu'est-ce que `mkfs.ext4` en réalité ?",o:["Un raccourci qui appelle `mke2fs` avec des options préconfigurées","Un outil indépendant","Un alias de `fdisk`","Un script systemd"],e:"`man mkfs.<type>` indique la vraie commande utilisée.",s:"Cours · Création"},
+{t:"Systèmes de fichiers",q:"Quelle commande agrandit un système de fichiers XFS ?",o:["`xfs_growfs`","`resize2fs`","`xfs_admin -g`","`lvextend -xfs`"],e:"Elle se lance sur le point de montage, le FS étant monté.",s:"Cours / TP07"},
+{t:"Systèmes de fichiers",q:"Quelle opération est impossible sur un système de fichiers XFS ?",o:["Le réduire","L'agrandir monté","Le monter par UUID","Le créer sur un LV"],e:"ext4 peut être réduit, mais démonté uniquement.",s:"TP07 · Stockage"},
+{t:"Systèmes de fichiers",q:"Comment vérifier et réparer un système de fichiers XFS ?",o:["`xfs_repair`","`fsck.xfs`","`e2fsck`","`tune2fs -c`"],e:"`fsck.xfs` ne fait rien, à cause de l'organisation particulière de XFS.",s:"Cours · Vérification"},
+{t:"Systèmes de fichiers",q:"Quelle commande modifie l'étiquette ou affiche le superbloc d'un ext4 ?",o:["`tune2fs` (`-L` étiquette, `-l` superbloc)","`xfs_admin`","`blkid -L`","`resize2fs -l`"],e:"`-i` et `-c` règlent l'intervalle et le nombre de montages avant vérification.",s:"Cours · Modification ext"},
+{t:"Systèmes de fichiers",q:"Pourquoi `df` affiche-t-il un espace disponible plus petit que prévu sur un ext4 ?",o:["ext4 réserve 5 % de l'espace à root","Le journal occupe la moitié","Le superbloc est dupliqué 10 fois","C'est un bug de `df`"],e:"Réglable avec `tune2fs -m`.",s:"TP07 · Stockage"},
+{t:"Systèmes de fichiers",q:"Quelle commande affiche l'UUID et le type d'un système de fichiers ?",o:["`blkid`","`df -h`","`du -sh`","`fdisk -l`"],e:"`lsblk -f` montre aussi type et UUID, sous forme d'arborescence.",s:"Cours · Prise d'informations"},
+
+/* ---------- Montage et fstab ---------- */
+{t:"Montage et fstab",q:"Pourquoi prendre un répertoire vide comme point de montage ?",o:["Le contenu existant devient inaccessible pendant le montage","Sinon le montage échoue","Pour économiser de l'espace","Pour éviter un fsck"],e:"Pour un montage temporaire, le cours conseille `/mnt` ou ses sous-répertoires.",s:"Cours · Montage"},
+{t:"Montage et fstab",q:"Quelle option de `mount` change une option sans démonter le système de fichiers ?",o:["`remount`","`-t`","`defaults`","`nouser`"],e:"Exemple : `mount -o remount,rw /`.",s:"Cours · Montage manuel"},
+{t:"Montage et fstab",q:"Que fait l'option de montage `noexec` ?",o:["Interdit l'exécution des fichiers présents sur ce système de fichiers","Monte en lecture seule","Désactive le cache","Empêche les utilisateurs de monter"],e:"`nosuid` empêche l'interprétation du SUID.",s:"Cours · Montage manuel"},
+{t:"Montage et fstab",q:"Quelles options regroupe `defaults` ?",o:["`async,nouser,exec,rw,auto,suid,dev`","`sync,user,noexec,ro`","`rw,noauto`","`ro,nosuid,nodev`"],e:"Tableau récapitulatif du cours.",s:"Cours · Montage automatique"},
+{t:"Montage et fstab",q:"Quelle commande affiche les points de montage de façon lisible, ou un seul point précis ?",o:["`findmnt`","`mount -l`","`blkid`","`lsblk -m`"],e:"`findmnt /mnt` affiche uniquement ce point de montage.",s:"Cours · findmnt"},
+{t:"Montage et fstab",q:"Qui réalise les montages automatiques déclarés dans `/etc/fstab` ?",o:["systemd, au début du démarrage","GRUB","Le noyau avant systemd","NetworkManager"],e:"Après modification de fstab : `systemctl daemon-reload`.",s:"Cours · Montage automatique"},
+{t:"Montage et fstab",q:"Pourquoi identifier une partition par UUID plutôt que par `/dev/sdb1` dans fstab ?",o:["L'UUID reste stable si le disque change de nom","L'UUID est plus rapide","`/dev/sdb1` n'est pas accepté","L'UUID active le chiffrement"],e:"Pour un LV, le chemin `/dev/<vg>/<lv>` est acceptable : deux LV ne peuvent pas avoir le même nom.",s:"Cours / TP07"},
+{t:"Montage et fstab",q:"Quel inconvénient a l'identification par LABEL dans fstab ?",o:["Un doublon d'étiquette pose problème","Il est plus lent","Il ne marche pas avec XFS","Il est limité à 8 caractères"],e:"L'UUID est la méthode la plus sûre.",s:"Cours · Montage automatique"},
+{t:"Montage et fstab",q:"Que signifie la valeur `2` dans le 6ᵉ champ de fstab ?",o:["Le fsck vérifie ce FS au démarrage, après la racine","Deuxième montage","Deux sauvegardes par dump","Montage en lecture seule"],e:"`1` = la racine, `0` = jamais. Pour XFS on met `0`.",s:"Cours / TP07"},
+{t:"Montage et fstab",q:"Quelle méthode le cours recommande-t-il pour tester une nouvelle ligne de fstab ?",o:["`mount <point de montage>` (ex. `mount /srv/data`)","`mount -a`","Redémarrer","`fsck -A`"],e:"`mount -a` tente de monter toutes les entrées, pas seulement la nouvelle. Si la commande ne renvoie rien, le montage a réussi.",s:"Cours · Montage automatique"},
+{t:"Montage et fstab",q:"Quelle commande vérifie la syntaxe de `/etc/fstab` ?",o:["`findmnt --verify`","`fstab -t`","`mount --check`","`blkid -v`"],e:"Une erreur dans fstab envoie en mode urgence au démarrage.",s:"TP07 · Stockage"},
+{t:"Montage et fstab",q:"Pourquoi utiliser `>>` et non `>` pour ajouter une ligne à `/etc/fstab` ?",o:["`>` écraserait le fichier et la VM ne démarrerait plus","`>` ajoute la ligne au début","`>>` vérifie la syntaxe","Aucune différence"],e:"Réflexe : sauvegarder fstab avant toute modification.",s:"TP07 · Stockage"},
+{t:"Montage et fstab",q:"Que mesure `du -sh /etc` ?",o:["L'espace occupé sur le disque par le répertoire et son contenu","L'espace libre de la partition","La taille de l'inode du répertoire","Le nombre de fichiers"],e:"`ls -l` sur un répertoire ne donne que la taille de son inode. `df` donne l'espace des systèmes de fichiers montés.",s:"Cours / TP07"},
+{t:"Montage et fstab",q:"Quelle option de `df` affiche l'utilisation des inodes ?",o:["`-i`","`-h`","`-T`","`-s`"],e:"`-h` = unités lisibles, `-T` = type de système de fichiers.",s:"Cours · Commandes informatives"},
+
+/* ---------- Utilisateurs et groupes ---------- */
+{t:"Utilisateurs et groupes",q:"Quelle plage d'UID correspond aux utilisateurs de service (daemons) ?",o:["1 à 999","0","1000 et plus","65534"],e:"root = 0, humains = 1000 et plus. La plupart des services tournent sous leur propre identité.",s:"Cours · Utilisateurs et groupes"},
+{t:"Utilisateurs et groupes",q:"Dans `/etc/passwd`, que signifie un `x` dans le champ mot de passe ?",o:["Le mot de passe est stocké dans `/etc/shadow`","Le compte est verrouillé","Le compte n'a pas de mot de passe","Le compte est expiré"],e:"Format : `nom:x:UID:GID:commentaire:home:shell`.",s:"Cours · /etc/passwd"},
+{t:"Utilisateurs et groupes",q:"Que détermine le champ GID dans `/etc/passwd` ?",o:["Le groupe principal de l'utilisateur","Tous ses groupes secondaires","Le groupe administrateur","Le shell"],e:"Les groupes secondaires sont listés dans `/etc/group`.",s:"Cours · /etc/passwd"},
+{t:"Utilisateurs et groupes",q:"Dans `/etc/shadow`, que signifie un hash commençant par `$6$` ?",o:["SHA-512","MD5","SHA-256","Blowfish"],e:"`$1$` = MD5, `$5$` = SHA-256, `$2a$` = Blowfish.",s:"Cours · /etc/shadow"},
+{t:"Utilisateurs et groupes",q:"Pourquoi ajoute-t-on un sel (salt) au mot de passe avant de le hacher ?",o:["Pour que deux mots de passe identiques donnent des hash différents","Pour chiffrer le mot de passe de façon réversible","Pour raccourcir le hash","Pour accélérer l'authentification"],e:"Dans l'exemple du cours, root et penthium ont le même mot de passe mais des hash différents.",s:"Cours · /etc/shadow"},
+{t:"Utilisateurs et groupes",q:"Dans `/etc/shadow`, une date de dernier changement à 0 signifie :",o:["L'utilisateur devra changer son mot de passe à la prochaine connexion","Le compte n'expire jamais","Le compte est désactivé","Le mot de passe est vide"],e:"Un champ vide = pas de vieillissement du mot de passe.",s:"Cours · /etc/shadow"},
+{t:"Utilisateurs et groupes",q:"Quelle différence entre expiration du mot de passe et date de fin de validité du compte ?",o:["Après la fin de validité du compte, plus aucune connexion n'est possible même avec un mot de passe valide","Aucune","L'expiration du compte force juste un changement de mot de passe","La fin de validité ne concerne que root"],e:"Réglable avec `usermod -e AAAA-MM-JJ` ou `chage`.",s:"Cours · /etc/shadow"},
+{t:"Utilisateurs et groupes",q:"Quel fichier `useradd` utilise-t-il pour ses valeurs par défaut ?",o:["`/etc/default/useradd`","`/etc/login.conf`","`/etc/skel/.bashrc`","`/etc/passwd.default`"],e:"Affichage ou modification aussi avec `useradd -D`.",s:"Cours · useradd"},
+{t:"Utilisateurs et groupes",q:"Quel est le rôle de `/etc/skel` ?",o:["Son contenu est copié dans le répertoire d'accueil d'un nouvel utilisateur","Il contient les mots de passe","Il liste les shells autorisés","C'est le home de root"],e:"Sur RHEL, `useradd` crée le home automatiquement (défini dans `/etc/login.defs`).",s:"Cours · useradd"},
+{t:"Utilisateurs et groupes",q:"Pourquoi ajouter `-a` à `usermod -G compta,rh alice` ?",o:["Pour ajouter ces groupes sans retirer ses groupes secondaires actuels","Pour créer les groupes s'ils n'existent pas","Pour changer son groupe principal","Pour verrouiller le compte"],e:"Sans `-a`, la liste des groupes secondaires est remplacée.",s:"Cours · usermod"},
+{t:"Utilisateurs et groupes",q:"Que fait `usermod -L alice` ?",o:["Verrouille son mot de passe en ajoutant `!` devant le hash dans `/etc/shadow`","Supprime son compte","Change son login","Déverrouille son compte"],e:"Pour bloquer complètement le compte, fixer aussi une date de fin de validité. `-U` déverrouille.",s:"Cours · usermod"},
+{t:"Utilisateurs et groupes",q:"Que fait `userdel -r alice` ?",o:["Supprime le compte et les fichiers de son répertoire d'accueil","Supprime le compte uniquement","Réinitialise son mot de passe","Supprime tous ses fichiers sur le système"],e:"Les fichiers en dehors de son home ne sont pas supprimés.",s:"Cours · userdel"},
+{t:"Utilisateurs et groupes",q:"Quelle commande force un utilisateur à changer son mot de passe à la prochaine connexion ?",o:["`passwd -e <utilisateur>`","`passwd -l <utilisateur>`","`usermod -U <utilisateur>`","`chsh <utilisateur>`"],e:"`passwd -l` verrouille, `-u` déverrouille.",s:"Cours · passwd"},
+{t:"Utilisateurs et groupes",q:"Quelle commande ajoute un utilisateur à un groupe avec `gpasswd` ?",o:["`gpasswd -a <utilisateur> <groupe>`","`gpasswd -g <groupe>`","`gpasswd -d <utilisateur> <groupe>`","`gpasswd -r <groupe>`"],e:"`-d` retire l'utilisateur du groupe.",s:"Cours · gpasswd"},
+{t:"Utilisateurs et groupes",q:"Quelle condition pour supprimer un groupe avec `groupdel` ?",o:["Il doit avoir été vidé de ses membres","Il doit être vide de fichiers","Il doit avoir un GID supérieur à 1000","Aucune"],e:"Attention aussi aux fichiers orphelins si on change un GID avec `groupmod -g`.",s:"Cours · groupdel"},
+{t:"Utilisateurs et groupes",q:"Quelle différence entre `su` et `su -` ?",o:["`su -` reproduit un login complet (environnement de l'utilisateur cible)","`su -` ne demande pas de mot de passe","`su` fonctionne seulement pour root","Aucune"],e:"Équivalent : `su -l`.",s:"Cours · La commande su"},
+{t:"Utilisateurs et groupes",q:"Quel mot de passe demande `sudo` ?",o:["Celui de l'utilisateur qui lance la commande","Celui de root","Aucun","Celui du groupe wheel"],e:"L'élévation est gardée 5 minutes par défaut.",s:"Cours · La commande sudo"},
+{t:"Utilisateurs et groupes",q:"Comment donner simplement tous les privilèges root via sudo à un utilisateur sur RHEL ?",o:["L'ajouter au groupe `wheel`","L'ajouter au groupe `root`","Lui donner l'UID 0","Modifier `/etc/passwd`"],e:"Pour des délégations fines, on édite `/etc/sudoers`.",s:"Cours · La commande sudo"},
+
+/* ---------- Droits et umask ---------- */
+{t:"Droits et umask",q:"Sur un répertoire, que permet le droit `x` ?",o:["De le traverser (cd) et d'accéder aux fichiers qu'il contient","De lister son contenu","De créer des fichiers","D'exécuter tous ses fichiers"],e:"`r` = lister (ls), `w` = modifier le contenu (créer, renommer, supprimer).",s:"Cours · Droits sur les fichiers"},
+{t:"Droits et umask",q:"Un utilisateur a le droit `w` sur un répertoire. Que peut-il faire sur un fichier qui ne lui appartient pas dedans ?",o:["Le renommer ou le supprimer","Rien","Seulement le lire","Seulement changer ses droits"],e:"Sauf si le sticky bit est posé sur le répertoire (ex. `/tmp`).",s:"Cours · Droits sur les fichiers"},
+{t:"Droits et umask",q:"Quels droits donne `chmod 750 dossier` ?",o:["`rwxr-x---`","`rwxrwx---`","`rw-r-x---`","`rwxr--r--`"],e:"7 = rwx, 5 = r-x, 0 = ---.",s:"Cours · Modification des droits"},
+{t:"Droits et umask",q:"Quelle commande change uniquement le groupe propriétaire de `/data/commun` en `users` ?",o:["`chown :users /data/commun`","`chown users /data/commun`","`chmod g=users /data/commun`","`chgrp -u users /data/commun`"],e:"`chown user:groupe` change les deux.",s:"Cours · Modification du propriétaire"},
+{t:"Droits et umask",q:"Avec un umask de `0022`, quels droits reçoit un nouveau fichier ?",o:["`644` (`rw-r--r--`)","`755`","`666`","`600`"],e:"Base 666 pour un fichier, 777 pour un répertoire (qui obtiendrait donc 755).",s:"Cours · UMASK"},
+{t:"Droits et umask",q:"Avec un umask de `0002`, quels droits reçoit un nouveau répertoire ?",o:["`775`","`755`","`777`","`664`"],e:"777 - 002 = 775.",s:"Cours · UMASK"},
+{t:"Droits et umask",q:"Quel umask doivent garder root et les comptes de service ?",o:["`0022`","`0002`","`0077`","`0000`"],e:"Les utilisateurs dont le groupe principal porte leur nom ont `0002` sur RHEL.",s:"Cours · UMASK"},
+{t:"Droits et umask",q:"Comment rendre un umask personnel permanent ?",o:["Ajouter la commande `umask` dans `~/.bashrc`","Modifier `/etc/passwd`","Utiliser `chmod -R`","Créer `/etc/umask`"],e:"La commande `umask` seule ne vaut que pour la session en cours.",s:"Cours · UMASK"},
+{t:"Droits et umask",q:"Pourquoi `/usr/bin/passwd` porte-t-il le droit SetUID ?",o:["Pour s'exécuter avec les droits de son propriétaire (root) et modifier `/etc/shadow`","Pour être exécutable par tous","Pour ne pas être supprimé","Pour hériter du groupe"],e:"SetUID vaut 4 en octal et apparaît en `s` à la place du x de l'utilisateur.",s:"Cours · Droits spéciaux"},
+{t:"Droits et umask",q:"Quel est l'effet du SetGID sur un répertoire ?",o:["Les fichiers créés dedans héritent du groupe du répertoire","Seul le propriétaire peut supprimer les fichiers","Les fichiers deviennent exécutables","Le répertoire est caché"],e:"Utile pour un dossier de projet commun. Octal : 2.",s:"Cours · Droits spéciaux"},
+{t:"Droits et umask",q:"Quel est l'effet du sticky bit sur `/tmp` ?",o:["Un fichier ne peut être supprimé que par son propriétaire et root","Les fichiers sont supprimés au redémarrage","Tout le monde peut supprimer les fichiers","Les fichiers héritent du groupe"],e:"Octal : 1. Apparaît en `t` à la place du x des autres.",s:"Cours · Droits spéciaux"},
+{t:"Droits et umask",q:"Dans `ls -l`, que signifie un `S` majuscule à la place du `x` de l'utilisateur ?",o:["SetUID posé, mais sans le droit d'exécution","SetUID posé avec le droit d'exécution","Sticky bit","Fichier système"],e:"`s` minuscule = SetUID + x.",s:"Cours · Droits spéciaux"},
+
+/* ---------- Journaux ---------- */
+{t:"Journaux",q:"Quelle commande affiche les logs d'un service précis avec journald ?",o:["`journalctl -u <service>`","`journalctl -s <service>`","`tail /var/log/<service>`","`systemctl logs <service>`"],e:"`systemctl status` affiche aussi les dernières lignes.",s:"Cours · journalctl"},
+{t:"Journaux",q:"Comment suivre les logs de journald en temps réel ?",o:["`journalctl -f`","`journalctl -r`","`journalctl --live`","`tail -f journald`"],e:"On peut cumuler : `journalctl -f /usr/sbin/sshd -p info`.",s:"Cours · journalctl"},
+{t:"Journaux",q:"Quel est l'ordre des priorités de log, du plus critique au plus informatif ?",o:["emerg, alert, crit, err, warning, notice, info, debug","debug, info, notice, warning, err, crit, alert, emerg","crit, emerg, alert, err, info, notice, warning, debug","err, warning, info, debug"],e:"`journalctl -p err` affiche err et plus critique.",s:"Cours · Niveaux de priorité"},
+{t:"Journaux",q:"Par défaut, où journald stocke-t-il ses logs et combien de temps ?",o:["Dans `/run/log/journal`, de façon volatile (démarrage en cours)","Dans `/var/log/journal`, pour toujours","Dans `/var/log/messages`, 30 jours","Dans la RAM, 24 h"],e:"Créer `/var/log/journal` rend la conservation durable.",s:"Cours · Gestion de la taille des logs"},
+{t:"Journaux",q:"Quel paramètre de `journald.conf` limite l'espace disque utilisé par le journal ?",o:["`SystemMaxUse=`","`Storage=`","`MaxRetention=`","`LogSize=`"],e:"`SystemMaxFileSize=` découpe en fichiers de taille fixe. Par défaut : 10 % du système de fichiers.",s:"Cours · Gestion de la taille des logs"},
+{t:"Journaux",q:"Quel est le rôle de rsyslog sur RHEL ?",o:["Conserver durablement les logs transmis par journald, dans des fichiers","Remplacer journald","Envoyer des e-mails","Superviser les processus"],e:"rsyslog peut aussi envoyer les logs vers un serveur distant.",s:"Cours · rsyslog"},
+{t:"Journaux",q:"Dans rsyslog, qu'est-ce qu'une « facility » ?",o:["La catégorie d'origine du message (auth, kern, mail, cron…)","Le niveau de gravité","Le fichier de destination","Le serveur distant"],e:"Règle = facility.priorité + action. Ex. : `auth,authpriv.* /var/log/auth.log`.",s:"Cours · rsyslog"},
+{t:"Journaux",q:"Dans `/etc/rsyslog.conf`, que signifie le `-` devant un chemin de fichier ?",o:["L'écriture est asynchrone","Le fichier est désactivé","Le fichier est compressé","Les messages sont exclus"],e:"Exemple : `-/var/log/syslog`.",s:"Cours · rsyslog"},
+{t:"Journaux",q:"Quelle commande envoie un message de test vers journald et rsyslog ?",o:["`logger -p cron.info \"message\"`","`echo message > /dev/log`","`journalctl --write`","`rsyslog -m`"],e:"Pratique pour tester une règle ou dans un script.",s:"Cours · logger"},
+{t:"Journaux",q:"Dans le `sshd_config` du TP, où la directive `SyslogFacility AUTHPRIV` envoie-t-elle les logs SSH ?",o:["`/var/log/secure`","`/var/log/messages`","`/var/log/sshd.log`","`/var/log/auth.log`"],e:"Sur RHEL, authpriv va dans `/var/log/secure`.",s:"TP04 · Services"},
+
+/* ---------- Outils d'analyse ---------- */
+{t:"Outils d'analyse",q:"Quelle commande affiche la version de RHEL installée ?",o:["`cat /etc/redhat-release`","`uname -r`","`lsb_release -k`","`rpm -q kernel`"],e:"`uname -a` donne le noyau actif et l'architecture.",s:"Cours · Outils d'analyse"},
+{t:"Outils d'analyse",q:"Quelle commande affiche le noyau en cours d'exécution ?",o:["`uname -r`","`cat /etc/redhat-release`","`dnf list kernel`","`grubby --default-kernel`"],e:"`grubby --default-kernel` donne celui qui démarrera la prochaine fois.",s:"Cours / TP06"},
+{t:"Outils d'analyse",q:"Quelle commande donne des informations sur le processeur ?",o:["`lscpu`","`lspci`","`free`","`lsusb`"],e:"`lspci` : périphériques PCI. `lsusb` : périphériques USB.",s:"Cours · Outils d'analyse"},
+{t:"Outils d'analyse",q:"Quelle commande indique la nature d'un fichier (ELF, texte, image…) ?",o:["`file`","`stat`","`type`","`ls -t`"],e:"Exemple : `file /bin/bash` → ELF 64-bit.",s:"Cours · Outils d'analyse"},
+{t:"Outils d'analyse",q:"Quelle commande montre les processus qui ont des fichiers ouverts dans un répertoire ?",o:["`lsof <répertoire>`","`ps -ef <répertoire>`","`du -a`","`findmnt`"],e:"Utile quand un `umount` échoue car le système de fichiers est occupé.",s:"Cours · Outils d'analyse"},
+{t:"Outils d'analyse",q:"Quel outil de supervision temps réel est présent nativement ?",o:["`top`","`htop`","`atop`","`glances`"],e:"htop, atop et glances sont à installer.",s:"Cours · Performances et processus"},
+{t:"Outils d'analyse",q:"Quelle commande recherche des processus par expression régulière ?",o:["`pgrep`","`ps -ef`","`kill -l`","`top -p`"],e:"`pgrep -l vi` affiche PID et nom.",s:"Cours · Lister les processus"},
+{t:"Outils d'analyse",q:"Quelle commande affiche l'utilisation de la RAM et du swap ?",o:["`free -h`","`df -h`","`du -sh`","`lsmem -s`"],e:"Colonne available = mémoire réellement disponible pour de nouvelles applications.",s:"Cours · Information sur la RAM"}
+];
+
+const $ = s => document.querySelector(s);
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt = s => esc(s).replace(/`([^`]+)`/g, '<code>$1</code>');
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+const THEMES = [...new Set(QUESTIONS.map(q => q.t))];
+let count = 20;
+let run = null;
+
+function show(id){ ['start','quiz','result'].forEach(s => $('#'+s).hidden = s !== id); window.scrollTo(0,0); }
+
+/* Accueil */
+function renderStart(){
+  $('#introTxt').textContent = `${QUESTIONS.length} questions tirées du cours et des TP. Questions et réponses sont mélangées à chaque partie.`;
+  $('#themes').innerHTML = THEMES.map(t => {
+    const n = QUESTIONS.filter(q => q.t === t).length;
+    return `<label class="chip"><input type="checkbox" value="${esc(t)}" checked><span>${esc(t)} (${n})</span></label>`;
+  }).join('');
+  $('#themes').querySelectorAll('input').forEach(i => i.addEventListener('change', updateAvail));
+  updateAvail();
+  const best = store.get(STORE_KEY);
+  $('#best').textContent = best ? `Meilleur score : ${best.s}/${best.n}` : '';
+}
+const selectedThemes = () => [...$('#themes').querySelectorAll('input:checked')].map(i => i.value);
+function updateAvail(){
+  const th = selectedThemes();
+  const n = QUESTIONS.filter(q => th.includes(q.t)).length;
+  $('#avail').textContent = `${n} disponibles`;
+  $('#counts').innerHTML = [10, 20, 40, 'all'].map(o => {
+    const lab = o === 'all' ? `Toutes (${n})` : o;
+    const dis = o !== 'all' && o >= n;
+    return `<label class="chip"><input type="radio" name="count" value="${o}" ${String(o) === String(count) ? 'checked' : ''} ${dis ? 'disabled' : ''}><span>${lab}</span></label>`;
+  }).join('');
+  if (!$('#counts input:checked:not(:disabled)')) { $('#counts input[value="all"]').checked = true; count = 'all'; }
+  $('#counts').querySelectorAll('input').forEach(i => i.addEventListener('change', () => count = i.value === 'all' ? 'all' : +i.value));
+  $('#go').disabled = n === 0;
+  $('#toggleAll').textContent = th.length ? 'Tout décocher' : 'Tout cocher';
+}
+
+/* Quiz */
+function start(pool, retry){
+  let items = shuffle(pool);
+  if (!retry && count !== 'all') items = items.slice(0, count);
+  run = { retry, items: items.map(q => ({ q, opts: shuffle(q.o.map((txt, k) => ({ txt, ok: k === 0 }))) })), i: 0, answers: [] };
+  $('#qtot').textContent = run.items.length;
+  const tr = $('#track');
+  tr.classList.toggle('dense', run.items.length > 40);
+  tr.innerHTML = run.items.map(() => '<i></i>').join('');
+  show('quiz');
+  renderQ();
+}
+function paintTrack(el, cur){
+  [...el.children].forEach((seg, k) => {
+    const a = run.answers[k];
+    seg.className = a === undefined ? (k === cur ? 'cur' : '') : (a.ok ? 'ok' : 'ko');
+  });
+}
+function renderQ(){
+  const it = run.items[run.i];
+  $('#qnum').textContent = run.i + 1;
+  $('#qtheme').textContent = it.q.t;
+  $('#qtext').innerHTML = fmt(it.q.q);
+  $('#opts').innerHTML = it.opts.map((o, k) =>
+    `<button class="opt" data-k="${k}"><span class="k">${'ABCD'[k]}</span><span>${fmt(o.txt)}</span></button>`).join('');
+  $('#opts').querySelectorAll('.opt').forEach(b => b.addEventListener('click', () => answer(+b.dataset.k)));
+  $('#fb').hidden = true;
+  $('#nextBtn').hidden = true;
+  paintTrack($('#track'), run.i);
+  $('#opts .opt').focus({ preventScroll: true });
+}
+function answer(k){
+  if (run.answers[run.i] !== undefined) return;
+  const it = run.items[run.i];
+  const ok = it.opts[k].ok;
+  run.answers[run.i] = { ok, picked: it.opts[k].txt };
+  $('#opts').querySelectorAll('.opt').forEach((b, j) => {
+    b.disabled = true;
+    b.classList.add(it.opts[j].ok ? 'right' : j === k ? 'wrong' : 'dim');
+  });
+  const fb = $('#fb');
+  fb.className = 'feedback ' + (ok ? 'ok' : 'ko');
+  fb.innerHTML = `<div class="verdict">${ok ? 'Bonne réponse' : 'Raté'}</div><div>${fmt(it.q.e)}</div><div class="src">${esc(it.q.s)}</div>`;
+  fb.hidden = false;
+  paintTrack($('#track'), -1);
+  const nb = $('#nextBtn');
+  nb.textContent = run.i === run.items.length - 1 ? 'Voir le résultat' : 'Question suivante';
+  nb.hidden = false;
+  nb.focus({ preventScroll: true });
+  fb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+function next(){ if (run.i < run.items.length - 1) { run.i++; renderQ(); } else renderResult(); }
+
+/* Résultats */
+function renderResult(){
+  const n = run.items.length, s = run.answers.filter(a => a && a.ok).length;
+  $('#rscore').textContent = `${s} / ${n}`;
+  $('#rpct').textContent = `${Math.round(s / n * 100)} %`;
+  const rt = $('#rtrack');
+  rt.classList.toggle('dense', n > 40);
+  rt.innerHTML = run.items.map(() => '<i></i>').join('');
+  paintTrack(rt, -1);
+
+  const by = {};
+  run.items.forEach((it, k) => { const t = it.q.t; by[t] = by[t] || { s: 0, n: 0 }; by[t].n++; if (run.answers[k]?.ok) by[t].s++; });
+  $('#rows').innerHTML = Object.entries(by).sort((a, b) => a[1].s / a[1].n - b[1].s / b[1].n).map(([t, v]) =>
+    `<div class="row"><span>${esc(t)}</span><span class="bar"><i style="width:${v.s / v.n * 100}%"></i></span><span class="n">${v.s}/${v.n}</span></div>`).join('');
+
+  const missed = run.items.map((it, k) => ({ it, a: run.answers[k] })).filter(x => !x.a?.ok);
+  $('#retryMiss').hidden = missed.length === 0;
+  $('#misses').innerHTML = missed.length ? '<h2>À revoir</h2>' + missed.map(({ it, a }) =>
+    `<div class="miss"><p><b>${fmt(it.q.q)}</b></p><p class="y">Ta réponse : ${fmt(a.picked)}</p><p class="a">Bonne réponse : ${fmt(it.q.o[0])}</p><p class="muted">${fmt(it.q.e)}</p></div>`
+  ).join('') : '<p>Aucune erreur. Bien joué.</p>';
+
+  if (!run.retry) {
+    const best = store.get(STORE_KEY);
+    if (n >= 10 && (!best || s / n > best.s / best.n)) store.set(STORE_KEY, { s, n });
+  }
+  run.missed = missed.map(x => x.it.q);
+  show('result');
+}
+
+/* Événements */
+$('#toggleAll').addEventListener('click', () => {
+  const inputs = $('#themes').querySelectorAll('input'); const anyOn = [...inputs].some(i => i.checked);
+  inputs.forEach(i => i.checked = !anyOn); updateAvail();
+});
+$('#go').addEventListener('click', () => { const th = selectedThemes(); start(QUESTIONS.filter(q => th.includes(q.t)), false); });
+$('#nextBtn').addEventListener('click', next);
+$('#quit').addEventListener('click', () => { renderStart(); show('start'); });
+$('#again').addEventListener('click', () => { renderStart(); show('start'); });
+$('#retryMiss').addEventListener('click', () => start(run.missed, true));
+document.addEventListener('keydown', e => {
+  if ($('#quiz').hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = { '1':0,'2':1,'3':2,'4':3,'a':0,'b':1,'c':2,'d':3 }[e.key.toLowerCase()];
+  if (k !== undefined && run.answers[run.i] === undefined && k < run.items[run.i].opts.length) { e.preventDefault(); answer(k); }
+  else if (e.key === 'Enter' && !$('#nextBtn').hidden && document.activeElement !== $('#nextBtn')) { e.preventDefault(); next(); }
+});
+
+renderStart();
+</script>
+</body>
+</html>
