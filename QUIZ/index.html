@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiz ASR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F4F6F9; --surface:#FFFFFF; --ink:#18202E; --muted:#5A6478; --line:#D8DEE8;
+  --win:#2457C5; --lin:#0E7C72;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#121722; --surface:#1A2130; --ink:#E6EAF2; --muted:#97A1B5; --line:#2C3547; --win:#6F9BFF; --lin:#3CC4B4;}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:760px;margin:0 auto;padding:20px 18px 32px}
+h1{font-size:1.6rem;line-height:1.2;margin:0 0 6px;font-weight:700;letter-spacing:-.01em}
+.intro{color:var(--muted);margin:0 0 22px}
+.list{display:grid;gap:12px}
+.card{display:grid;grid-template-columns:6px 1fr auto;gap:18px;align-items:center;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px 18px 0;overflow:hidden}
+.card::before{content:"";align-self:stretch;margin:-18px 0;background:var(--c)}
+.card:hover{border-color:var(--c)}
+.card:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.card h2{margin:0 0 2px;font-size:1.15rem;font-weight:600}
+.card p{margin:0;color:var(--muted);font-size:.92rem}
+.meta{text-align:right;font-size:.85rem;color:var(--muted);white-space:nowrap}
+.meta b{display:block;color:var(--ink);font-size:1.1rem;font-weight:600}
+.win{--c:var(--win)} .lin{--c:var(--lin)}
+@media (max-width:520px){.card{grid-template-columns:6px 1fr}.meta{grid-column:2;text-align:left}.meta b{display:inline;margin-right:6px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1>Quiz ASR</h1>
+  <p class="intro">Choisis un module pour réviser.</p>
+  <div class="list">
+    <a class="card win" href="quiz-s01-windows.html">
+      <div>
+        <h2>S01 – Admin Windows</h2>
+        <p>Windows Server, AD DS, FSMO, groupes, NTFS, AGDLP, impression, GPO, PSO</p>
+      </div>
+      <div class="meta" data-key="asrquiz-best-windows"><b>143</b>questions</div>
+    </a>
+    <a class="card lin" href="quiz-s02-linux.html">
+      <div>
+        <h2>S02 – Admin Linux</h2>
+        <p>GRUB, systemd, réseau, dnf/rpm, LVM, fstab, utilisateurs, droits, journaux</p>
+      </div>
+      <div class="meta" data-key="asrquiz-best-linux"><b>187</b>questions</div>
+    </a>
+  </div>
+</main>
+<script>
+/* Affiche le meilleur score enregistré par chaque quiz (même site = même stockage) */
+document.querySelectorAll('.meta').forEach(el => {
+  try {
+    const best = JSON.parse(localStorage.getItem(el.dataset.key));
+    if (best) el.innerHTML = `<b>${Math.round(best.s / best.n * 100)} %</b>meilleur score`;
+  } catch (e) {}
+});
+</script>
+</body>
+</html>
